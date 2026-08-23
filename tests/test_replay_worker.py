@@ -129,3 +129,38 @@ def test_failure_marks_failed() -> None:
     assert sessions.session.status == "failed"
     assert sessions.failed is not None
     assert "RuntimeError" in sessions.failed
+
+
+class _Inspector:
+    def __init__(self, present: bool) -> None:
+        self._present = present
+
+    def has_table(self, name: str) -> bool:
+        return self._present
+
+
+def test_wait_for_schema_present(monkeypatch) -> None:
+    import streamchart.workers.replay_worker as worker
+
+    monkeypatch.setattr(worker, "get_engine", lambda: object())
+    monkeypatch.setattr(worker, "inspect", lambda _engine: _Inspector(True))
+    assert worker.wait_for_schema(attempts=1, delay=0.0) is True
+
+
+def test_wait_for_schema_absent_gives_up(monkeypatch) -> None:
+    import streamchart.workers.replay_worker as worker
+
+    monkeypatch.setattr(worker, "get_engine", lambda: object())
+    monkeypatch.setattr(worker, "inspect", lambda _engine: _Inspector(False))
+    assert worker.wait_for_schema(attempts=2, delay=0.0) is False
+
+
+def test_wait_for_schema_handles_db_error(monkeypatch) -> None:
+    import streamchart.workers.replay_worker as worker
+
+    def _boom(_engine: object) -> object:
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(worker, "get_engine", lambda: object())
+    monkeypatch.setattr(worker, "inspect", _boom)
+    assert worker.wait_for_schema(attempts=1, delay=0.0) is False

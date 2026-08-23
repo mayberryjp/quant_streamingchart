@@ -5,7 +5,10 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Protocol
 
+from sqlalchemy import inspect
+
 from streamchart.config import settings
+from streamchart.db import get_engine
 from streamchart.domain.bars import Bar, resample
 from streamchart.domain.replay import ReplaySession
 from streamchart.integrations.kafka_producer import DeliveryResult, SliceProducer, create_producer
@@ -104,10 +107,42 @@ def process_next(
         return True
 
 
+REQUIRED_TABLE = "replay_sessions"
+
+
+def wait_for_schema(*, attempts: int = 60, delay: float = 2.0) -> bool:
+    """Block until migrations have created the required tables.
+
+    Returns True once the schema is present, or False if it gives up after
+    ``attempts`` tries (the caller then relies on per-iteration retries).
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            if inspect(get_engine()).has_table(REQUIRED_TABLE):
+                return True
+            log.info(
+                "waiting for schema: table %r not found (attempt %s/%s)",
+                REQUIRED_TABLE,
+                attempt,
+                attempts,
+            )
+        except Exception as exc:
+            log.info(
+                "waiting for database: %s (attempt %s/%s)",
+                type(exc).__name__,
+                attempt,
+                attempts,
+            )
+        time.sleep(delay)
+    return False
+
+
 def main() -> None:  # pragma: no cover - long-running loop wiring
     from streamchart.repository import bars_repo, replays_repo
 
     configure_logging(settings.log_level)
+    if not wait_for_schema():
+        log.warning("schema not confirmed; iterations will retry until migrations apply")
     producer = SliceProducer(create_producer(), settings.kafka_topic)
     log.info("replay_worker started topic=%s", settings.kafka_topic)
 

@@ -138,7 +138,6 @@ quant_streamingchart/
     conftest.py
     ...
   .dockerignore
-  .env.example
   .gitignore
   alembic.ini
   docker-compose.yml
@@ -173,7 +172,8 @@ aliases for shared platform vars.
 | `kafka_client_id` | `SERVICE_KAFKA_CLIENT_ID` | `streamchart-producer` | |
 | `kafka_acks` | `SERVICE_KAFKA_ACKS` | `all` | durability |
 
-Only `.env.example` is committed; `.env` is git‑ignored (standards Section 13a).
+Service configuration is supplied via environment variables (see `docker-compose.yml`); `.env` is
+git‑ignored (standards Section 13a).
 
 ## 7. Data Model
 Postgres, one service‑specific Alembic version table. All timestamps are `timestamptz` (UTC).
@@ -297,8 +297,8 @@ business logic yet.
 - `api/app.py` `create_app()` factory, `api/routes/health.py` (`/health`, `/ready`), JSON 404.
 - `api/api_main.py` (Waitress entrypoint), `__main__.py`.
 - Alembic baseline (empty head), `alembic.ini`, `env.py` (reads `DATABASE_URL`, service version table).
-- `Dockerfile`, `supervisord.conf` (`migrate` + `api`), `docker-compose.yml` (image ref only),
-  `.dockerignore`, `.gitignore`, `.env.example`, `README.md`, CI `ci.yml`.
+- `Dockerfile`, `supervisord.conf` (`migrate` + `api`), `docker-compose.yml` (image ref + env),
+  `.dockerignore`, `.gitignore`, `README.md`, CI `ci.yml`.
 
 **Behavior**
 - `/health` → `{"status":"ok","service":"streamchart-api"}`.

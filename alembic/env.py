@@ -19,12 +19,22 @@ target_metadata = metadata
 VERSION_TABLE = "alembic_version_streamchart"
 
 
+def include_name(name: str | None, type_: str, parent_names: dict[str, str | None]) -> bool:
+    # On a shared database, only manage this service's own tables so autogenerate
+    # never proposes dropping tables owned by other applications.
+    if type_ == "table":
+        return name in target_metadata.tables
+    return True
+
+
 def run_migrations_offline() -> None:
     context.configure(
         url=settings.database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         version_table=VERSION_TABLE,
+        include_name=include_name,
+        include_schemas=False,
         dialect_opts={"paramstyle": "named"},
     )
     with context.begin_transaction():
@@ -39,6 +49,8 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             version_table=VERSION_TABLE,
+            include_name=include_name,
+            include_schemas=False,
         )
         with context.begin_transaction():
             context.run_migrations()
