@@ -1,0 +1,23 @@
+services:
+  app:
+    image: quant-streamingchart:dev
+    environment:
+      DATABASE_URL: postgresql+psycopg://app:app@db.internal:5432/app
+      API_LISTEN_ADDRESS: 0.0.0.0
+      API_PORT: "8000"
+      SERVICE_LOG_LEVEL: INFO
+      SERVICE_YF_BASE_URL: https://query1.finance.yahoo.com/v8/finance/chart
+      SERVICE_YF_USER_AGENT: "quant-streamingchart/0.1 (+contact: /u/homelabids)"
+      SERVICE_YF_TIMEOUT_SECONDS: "10"
+      SERVICE_DEFAULT_TICKER: MSFT
+      SERVICE_BASE_INTERVAL: 1m
+      SERVICE_SOURCE_RANGE: 1d
+      SERVICE_TARGET_INTERVAL: 1m
+      SERVICE_REPLAY_INTERVAL_SECONDS: "1.0"
+      SERVICE_REPLAY_WORKER_POLL_SECONDS: "2"
+      SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka.internal:9092
+      SERVICE_KAFKA_TOPIC: market.replay.bars
+      SERVICE_KAFKA_CLIENT_ID: streamchart-producer
+      SERVICE_KAFKA_ACKS: all
+    ports:
+      - "8000:8000"
