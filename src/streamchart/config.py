@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     # Kafka.
     kafka_bootstrap_servers: str = ""
-    kafka_topic: str = "market.replay.bars"
+    kafka_topic: str = "paper-ticks"
     kafka_client_id: str = "streamchart-producer"
     kafka_acks: str = "all"
 

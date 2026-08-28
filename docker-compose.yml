@@ -16,7 +16,7 @@ services:
       SERVICE_REPLAY_INTERVAL_SECONDS: "1.0"
       SERVICE_REPLAY_WORKER_POLL_SECONDS: "2"
       SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka.internal:9092
-      SERVICE_KAFKA_TOPIC: market.replay.bars
+      SERVICE_KAFKA_TOPIC: paper-ticks
       SERVICE_KAFKA_CLIENT_ID: streamchart-producer
       SERVICE_KAFKA_ACKS: all
     ports:
