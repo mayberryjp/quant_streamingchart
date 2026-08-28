@@ -30,7 +30,16 @@ class Settings(BaseSettings):
 
     # Replay cadence.
     replay_interval_seconds: float = 1.0
-    replay_worker_poll_seconds: float = 2.0
+    replay_worker_poll_seconds: float = 600.0
+
+    # Scheduled watchlist ingest.
+    scheduler_enabled: bool = False
+    scheduler_trigger_time: str = "11:00"
+    scheduler_timezone: str = "Asia/Tokyo"
+    scheduler_check_interval_seconds: float = 60.0
+    scheduler_http_timeout_seconds: float = 30.0
+    stickynote_base_url: str = "http://stickynote:8080"
+    internal_api_base_url: str = "http://localhost:8000"
 
     # Kafka.
     kafka_bootstrap_servers: str = ""

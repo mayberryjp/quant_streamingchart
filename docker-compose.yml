@@ -19,5 +19,11 @@ services:
       SERVICE_KAFKA_TOPIC: paper-ticks
       SERVICE_KAFKA_CLIENT_ID: streamchart-producer
       SERVICE_KAFKA_ACKS: all
+      SERVICE_SCHEDULER_ENABLED: "true"
+      SERVICE_SCHEDULER_TRIGGER_TIME: "11:00"
+      SERVICE_SCHEDULER_TIMEZONE: Asia/Tokyo
+      SERVICE_SCHEDULER_CHECK_INTERVAL_SECONDS: "900"
+      SERVICE_STICKYNOTE_BASE_URL: http://stickynote:8080
+      SERVICE_INTERNAL_API_BASE_URL: http://localhost:8000
     ports:
       - "8000:8000"
