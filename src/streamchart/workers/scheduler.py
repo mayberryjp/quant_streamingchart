@@ -20,7 +20,7 @@ from streamchart.logging import configure_logging, get_logger
 
 log = get_logger("streamchart.worker.scheduler")
 
-WATCHLIST_PATH = "/api/sticky-notes/latest"
+WATCHLIST_PATH = "/sticky-notes/latest"
 
 
 def parse_hhmm(value: str) -> dtime:
