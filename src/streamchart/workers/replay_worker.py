@@ -102,7 +102,7 @@ def stream_session(
     for sequence in range(start_sequence, total):
         bar = slices[sequence]
         emitted_at = now()
-        result = producer.produce_slice(
+        producer.produce_slice(
             session,
             sequence,
             bar,
@@ -110,16 +110,14 @@ def stream_session(
             is_last=sequence == total - 1,
             emitted_at=emitted_at,
         )
-        log.info(
-            "replay emit session=%s ticker=%s seq=%s/%s bar_time=%s partition=%s offset=%s",
-            session.id,
-            session.ticker,
-            sequence + 1,
-            total,
-            bar.bar_time.isoformat(),
-            result.partition,
-            result.offset,
-        )
+        if (sequence + 1) % 100 == 0:
+            log.info(
+                "replay progress session=%s ticker=%s seq=%s/%s",
+                session.id,
+                session.ticker,
+                sequence + 1,
+                total,
+            )
         if sequence < total - 1:
             sleep(session.replay_interval_seconds)
 
