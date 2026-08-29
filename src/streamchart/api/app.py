@@ -26,8 +26,20 @@ def create_app() -> Bottle:
     register_replay_routes(app)
     register_status_routes(app)
 
+    def add_cors_headers() -> None:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Origin, Content-Type, Accept"
+
+    app.add_hook("after_request", add_cors_headers)
+
+    @app.route("/<:re:.*>", method="OPTIONS")
+    def cors_preflight() -> str:
+        return ""
+
     @app.error(404)
     def not_found(_err: Any) -> str:
+        add_cors_headers()
         response.content_type = "application/json"
         return json.dumps({"status": "error", "code": "not_found", "error": "not found"})
 
