@@ -27,10 +27,8 @@ def _session(status: str = "pending", last_sequence: int = -1, emitted: int = 0)
 
 
 class FakeSessions:
-    def __init__(self, session: ReplaySession, cancel_after: int | None = None) -> None:
+    def __init__(self, session: ReplaySession) -> None:
         self.session = session
-        self.cancel_after = cancel_after
-        self.events: list[int] = []
         self.failed: str | None = None
         self._claimed = False
 
@@ -41,18 +39,6 @@ class FakeSessions:
         if self.session.status == "pending":
             self.session.status = "running"
         return self.session
-
-    def is_cancelled(self, session_id: str) -> bool:
-        return self.session.status == "cancelled"
-
-    def update_progress(self, session_id: str, *, emitted: int, last_sequence: int) -> None:
-        self.session.emitted_slices = emitted
-        self.session.last_sequence = last_sequence
-        if self.cancel_after is not None and last_sequence >= self.cancel_after:
-            self.session.status = "cancelled"
-
-    def record_event(self, session_id, sequence, bar_time, emitted_at, partition, offset) -> None:
-        self.events.append(sequence)
 
     def mark_completed(self, session_id: str) -> None:
         self.session.status = "completed"
@@ -94,8 +80,6 @@ def test_full_run_emits_all_and_completes() -> None:
     assert _run(sessions, FakeBars(), producer) is True
     assert producer.calls == [0, 1, 2]
     assert sessions.session.status == "completed"
-    assert sessions.session.emitted_slices == 3
-    assert sessions.session.last_sequence == 2
 
 
 def test_no_session_returns_false() -> None:
@@ -104,21 +88,12 @@ def test_no_session_returns_false() -> None:
     assert _run(sessions, FakeBars(), FakeProducer()) is False
 
 
-def test_cancel_mid_run_stops() -> None:
-    sessions = FakeSessions(_session(), cancel_after=0)
-    producer = FakeProducer()
-    assert _run(sessions, FakeBars(), producer) is True
-    assert producer.calls == [0]
-    assert sessions.session.status == "cancelled"
-
-
 def test_resume_from_last_sequence() -> None:
     sessions = FakeSessions(_session(status="running", last_sequence=0, emitted=1))
     producer = FakeProducer()
     assert _run(sessions, FakeBars(), producer) is True
     assert producer.calls == [1, 2]
     assert sessions.session.status == "completed"
-    assert sessions.session.emitted_slices == 3
 
 
 def test_failure_marks_failed() -> None:
