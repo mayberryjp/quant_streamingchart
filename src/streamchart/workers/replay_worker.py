@@ -124,6 +124,16 @@ def stream_session(
                 result.offset,
             )
             sessions_repo.update_progress(session.id, emitted=sequence + 1, last_sequence=sequence)
+            log.info(
+                "replay emit session=%s ticker=%s seq=%s/%s bar_time=%s partition=%s offset=%s",
+                session.id,
+                session.ticker,
+                sequence + 1,
+                total,
+                bar.bar_time.isoformat(),
+                result.partition,
+                result.offset,
+            )
             if sequence < total - 1:
                 sleep(session.replay_interval_seconds)
         if not sessions_repo.is_cancelled(session.id):
@@ -223,6 +233,8 @@ def main() -> None:  # pragma: no cover - long-running loop wiring
         except Exception:
             log.exception("failed to list pending replays")
             pending = []
+        if pending:
+            log.info("found %s pending replay(s); active=%s", len(pending), len(active))
         for session in pending:
             if session.id in active:
                 continue
