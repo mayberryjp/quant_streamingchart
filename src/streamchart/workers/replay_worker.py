@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -71,6 +72,23 @@ def process_next(
     session = sessions_repo.claim_next_runnable()
     if session is None:
         return False
+    stream_session(
+        sessions_repo, bars_repo, producer, session, base_interval=base_interval, sleep=sleep, now=now
+    )
+    return True
+
+
+def stream_session(
+    sessions_repo: SessionsRepo,
+    bars_repo: BarsRepo,
+    producer: Producer,
+    session: ReplaySession,
+    *,
+    base_interval: str,
+    sleep: Callable[[float], None] = time.sleep,
+    now: Callable[[], datetime] = utcnow,
+) -> None:
+    """Stream the remaining slices of an already-claimed (running) session."""
     try:
         slices = build_slices(bars_repo, session, base_interval)
         total = len(slices)
@@ -86,7 +104,7 @@ def process_next(
         for sequence in range(start_sequence, total):
             if sessions_repo.is_cancelled(session.id):
                 log.info("replay cancelled session=%s at sequence=%s", session.id, sequence)
-                return True
+                return
             bar = slices[sequence]
             emitted_at = now()
             result = producer.produce_slice(
@@ -116,11 +134,9 @@ def process_next(
                 session.ticker,
                 total,
             )
-        return True
     except Exception as exc:
         log.exception("replay failed for session %s", session.id)
         sessions_repo.mark_failed(session.id, f"{type(exc).__name__}: {exc}")
-        return True
 
 
 REQUIRED_TABLE = "replay_sessions"
@@ -153,30 +169,77 @@ def wait_for_schema(*, attempts: int = 60, delay: float = 2.0) -> bool:
     return False
 
 
-def main() -> None:  # pragma: no cover - long-running loop wiring
+def _run_session_child(session_id: str) -> int:  # pragma: no cover - runs in forked child
+    """Forked child entrypoint: stream one already-claimed session, then exit."""
     from streamchart.repository import bars_repo, replays_repo
+
+    # Drop connections inherited across fork; open fresh ones in this process.
+    get_engine().dispose()
+    try:
+        producer = SliceProducer(create_producer(), settings.kafka_topic)
+        session = replays_repo.get_session(session_id)
+        if session is None:
+            return 0
+        stream_session(
+            replays_repo, bars_repo, producer, session, base_interval=settings.base_interval
+        )
+    except Exception:
+        log.exception("replay child crashed session=%s", session_id)
+        return 1
+    return 0
+
+
+def _reap_children(active: dict[str, int]) -> None:  # pragma: no cover - process wiring
+    """Remove finished children from the active map (non-blocking)."""
+    for session_id, pid in list(active.items()):
+        try:
+            reaped, _status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            active.pop(session_id, None)
+            continue
+        if reaped == 0:
+            continue
+        active.pop(session_id, None)
+        log.info("replay child finished session=%s pid=%s", session_id, pid)
+
+
+def main() -> None:  # pragma: no cover - long-running loop wiring
+    from streamchart.repository import replays_repo
 
     configure_logging(settings.log_level)
     if not wait_for_schema():
         log.warning("schema not confirmed; iterations will retry until migrations apply")
-    producer = SliceProducer(create_producer(), settings.kafka_topic)
-    log.info("replay_worker started topic=%s", settings.kafka_topic)
+    log.info(
+        "replay_worker started topic=%s poll=%ss",
+        settings.kafka_topic,
+        settings.replay_worker_poll_seconds,
+    )
 
-    sessions: Any = replays_repo
-    bars: Any = bars_repo
+    active: dict[str, int] = {}
     while True:
+        _reap_children(active)
         try:
-            worked = process_next(
-                sessions,
-                bars,
-                producer,
-                base_interval=settings.base_interval,
-            )
+            pending = replays_repo.list_pending()
         except Exception:
-            log.exception("replay iteration failed")
-            worked = False
-        if not worked:
-            time.sleep(settings.replay_worker_poll_seconds)
+            log.exception("failed to list pending replays")
+            pending = []
+        for session in pending:
+            if session.id in active:
+                continue
+            claimed = replays_repo.claim_session(session.id)
+            if claimed is None:
+                continue
+            pid = os.fork()
+            if pid == 0:
+                os._exit(_run_session_child(claimed.id))
+            active[claimed.id] = pid
+            log.info(
+                "replay forked session=%s ticker=%s pid=%s",
+                claimed.id,
+                claimed.ticker,
+                pid,
+            )
+        time.sleep(settings.replay_worker_poll_seconds)
 
 
 if __name__ == "__main__":  # pragma: no cover

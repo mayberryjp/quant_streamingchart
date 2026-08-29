@@ -94,6 +94,45 @@ def list_sessions() -> list[ReplaySession]:
     return [_row_to_session(row) for row in rows]
 
 
+def list_pending() -> list[ReplaySession]:
+    stmt = (
+        select(replay_sessions)
+        .where(replay_sessions.c.status == PENDING)
+        .order_by(replay_sessions.c.created_at.asc())
+    )
+    with get_engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [_row_to_session(row) for row in rows]
+
+
+def claim_session(session_id: str) -> ReplaySession | None:
+    """Atomically transition one pending session to running. Returns it, or None
+    if it is not pending / already claimed by another process."""
+    now = utcnow()
+    with get_engine().begin() as conn:
+        row = (
+            conn.execute(
+                select(replay_sessions)
+                .where(replay_sessions.c.id == session_id)
+                .where(replay_sessions.c.status == PENDING)
+                .with_for_update(skip_locked=True)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        conn.execute(
+            update(replay_sessions)
+            .where(replay_sessions.c.id == session_id)
+            .values(status=RUNNING, started_at=now)
+        )
+        data: dict[str, Any] = dict(row)
+        data["status"] = RUNNING
+        data["started_at"] = now
+    return _row_to_session(data)
+
+
 def claim_next_runnable() -> ReplaySession | None:
     """Return the next pending/running session, transitioning pending -> running."""
     now = utcnow()
