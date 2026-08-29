@@ -74,8 +74,18 @@ def process_next(
     try:
         slices = build_slices(bars_repo, session, base_interval)
         total = len(slices)
-        for sequence in range(session.last_sequence + 1, total):
+        start_sequence = session.last_sequence + 1
+        log.info(
+            "replay started session=%s ticker=%s interval=%s slices=%s from=%s",
+            session.id,
+            session.ticker,
+            session.interval,
+            total,
+            start_sequence,
+        )
+        for sequence in range(start_sequence, total):
             if sessions_repo.is_cancelled(session.id):
+                log.info("replay cancelled session=%s at sequence=%s", session.id, sequence)
                 return True
             bar = slices[sequence]
             emitted_at = now()
@@ -100,6 +110,12 @@ def process_next(
                 sleep(session.replay_interval_seconds)
         if not sessions_repo.is_cancelled(session.id):
             sessions_repo.mark_completed(session.id)
+            log.info(
+                "replay completed session=%s ticker=%s emitted=%s",
+                session.id,
+                session.ticker,
+                total,
+            )
         return True
     except Exception as exc:
         log.exception("replay failed for session %s", session.id)
