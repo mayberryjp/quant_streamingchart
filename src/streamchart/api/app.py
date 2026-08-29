@@ -10,6 +10,7 @@ from streamchart.api.routes.bars import register_bars_routes
 from streamchart.api.routes.fetch import register_fetch_routes
 from streamchart.api.routes.health import register_health_routes
 from streamchart.api.routes.replays import register_replay_routes
+from streamchart.api.routes.status import register_status_routes
 from streamchart.logging import get_logger
 
 SERVICE_NAME = "streamchart-api"
@@ -23,6 +24,7 @@ def create_app() -> Bottle:
     register_fetch_routes(app)
     register_bars_routes(app)
     register_replay_routes(app)
+    register_status_routes(app)
 
     @app.error(404)
     def not_found(_err: Any) -> str:

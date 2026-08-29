@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from streamchart.db import get_engine
@@ -72,3 +72,23 @@ def get_bars(ticker: str, interval: str) -> list[Bar]:
     with get_engine().connect() as conn:
         rows = conn.execute(stmt).mappings().all()
     return [_row_to_bar(row) for row in rows]
+
+
+def list_fetch_summaries(ticker: str | None = None) -> list[dict[str, Any]]:
+    """Aggregate stored bars into one summary row per (ticker, interval)."""
+    stmt = select(
+        instrument_bars.c.ticker,
+        instrument_bars.c.interval,
+        func.count().label("bars"),
+        func.min(instrument_bars.c.bar_time).label("first_bar"),
+        func.max(instrument_bars.c.bar_time).label("last_bar"),
+        func.max(instrument_bars.c.fetched_at).label("last_fetched_at"),
+    )
+    if ticker is not None:
+        stmt = stmt.where(instrument_bars.c.ticker == ticker.upper())
+    stmt = stmt.group_by(instrument_bars.c.ticker, instrument_bars.c.interval).order_by(
+        instrument_bars.c.ticker.asc(), instrument_bars.c.interval.asc()
+    )
+    with get_engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [dict(row) for row in rows]
