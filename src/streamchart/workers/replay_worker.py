@@ -11,7 +11,7 @@ from sqlalchemy import inspect
 from streamchart.config import settings
 from streamchart.db import get_engine
 from streamchart.domain.bars import Bar, resample
-from streamchart.domain.replay import ReplaySession
+from streamchart.domain.replay import PENDING, ReplaySession
 from streamchart.integrations.kafka_producer import DeliveryResult, SliceProducer, create_producer
 from streamchart.logging import configure_logging, get_logger
 from streamchart.timeutil import utcnow
@@ -183,8 +183,8 @@ def _run_session_child(session_id: str) -> int:  # pragma: no cover - runs in fo
     """Forked child entrypoint: stream one already-claimed session, then exit."""
     from streamchart.repository import bars_repo, replays_repo
 
-    # Drop connections inherited across fork; open fresh ones in this process.
-    get_engine().dispose()
+    # Drop the pool inherited across fork WITHOUT closing the parent's sockets.
+    get_engine().dispose(close=False)
     try:
         producer = SliceProducer(create_producer(), settings.kafka_topic)
         session = replays_repo.get_session(session_id)
@@ -229,18 +229,28 @@ def main() -> None:  # pragma: no cover - long-running loop wiring
     while True:
         _reap_children(active)
         try:
-            pending = replays_repo.list_pending()
+            candidates = replays_repo.list_resumable()
         except Exception:
-            log.exception("failed to list pending replays")
-            pending = []
-        if pending:
-            log.info("found %s pending replay(s); active=%s", len(pending), len(active))
-        for session in pending:
+            log.exception("failed to list resumable replays")
+            candidates = []
+        if candidates:
+            log.info("found %s resumable replay(s); active=%s", len(candidates), len(active))
+        for session in candidates:
             if session.id in active:
                 continue
-            claimed = replays_repo.claim_session(session.id)
-            if claimed is None:
-                continue
+            if session.status == PENDING:
+                claimed = replays_repo.claim_session(session.id)
+                if claimed is None:
+                    continue
+            else:
+                # Orphaned RUNNING session from a previous worker; resume it.
+                claimed = session
+                log.info(
+                    "resuming orphaned replay session=%s ticker=%s last_sequence=%s",
+                    session.id,
+                    session.ticker,
+                    session.last_sequence,
+                )
             pid = os.fork()
             if pid == 0:
                 os._exit(_run_session_child(claimed.id))

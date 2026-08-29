@@ -105,6 +105,18 @@ def list_pending() -> list[ReplaySession]:
     return [_row_to_session(row) for row in rows]
 
 
+def list_resumable() -> list[ReplaySession]:
+    """Pending sessions plus running sessions left orphaned by a prior worker."""
+    stmt = (
+        select(replay_sessions)
+        .where(replay_sessions.c.status.in_([PENDING, RUNNING]))
+        .order_by(replay_sessions.c.created_at.asc())
+    )
+    with get_engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [_row_to_session(row) for row in rows]
+
+
 def claim_session(session_id: str) -> ReplaySession | None:
     """Atomically transition one pending session to running. Returns it, or None
     if it is not pending / already claimed by another process."""
