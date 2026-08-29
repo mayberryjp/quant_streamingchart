@@ -52,6 +52,20 @@ def fetch_watchlist(client: httpx.Client, stickynote_base_url: str) -> tuple[str
     return signal_date, tickers
 
 
+def wait_for_api(client: httpx.Client, api_base_url: str, timeout_seconds: float) -> None:
+    """Block until the local API answers /health, so we don't race it on startup."""
+    base = api_base_url.rstrip("/")
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            client.get(f"{base}/health").raise_for_status()
+            return
+        except httpx.HTTPError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(1.0)
+
+
 def trigger_ticker(
     client: httpx.Client,
     api_base_url: str,
@@ -125,6 +139,11 @@ def main() -> None:  # pragma: no cover - long-running loop wiring
         if is_trigger_due(now_local, trigger, last_run):
             try:
                 with httpx.Client(timeout=settings.scheduler_http_timeout_seconds) as client:
+                    wait_for_api(
+                        client,
+                        settings.internal_api_base_url,
+                        settings.scheduler_http_timeout_seconds,
+                    )
                     run_job(
                         client,
                         stickynote_base_url=settings.stickynote_base_url,
