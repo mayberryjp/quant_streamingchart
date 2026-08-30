@@ -217,7 +217,12 @@ def mark_completed(session_id: str) -> None:
             update(replay_sessions)
             .where(replay_sessions.c.id == session_id)
             .where(replay_sessions.c.status == RUNNING)
-            .values(status=COMPLETED, completed_at=utcnow())
+            .values(
+                status=COMPLETED,
+                completed_at=utcnow(),
+                emitted_slices=replay_sessions.c.total_slices,
+                last_sequence=replay_sessions.c.total_slices - 1,
+            )
         )
 
 
