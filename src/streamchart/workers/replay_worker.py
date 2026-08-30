@@ -214,11 +214,10 @@ def main() -> None:  # pragma: no cover - long-running loop wiring
         except Exception:
             log.exception("failed to list resumable replays")
             candidates = []
-        if candidates:
-            log.info("found %s resumable replay(s); active=%s", len(candidates), len(active))
-        for session in candidates:
-            if session.id in active:
-                continue
+        new_sessions = [session for session in candidates if session.id not in active]
+        if new_sessions:
+            log.info("found %s resumable replay(s); active=%s", len(new_sessions), len(active))
+        for session in new_sessions:
             if session.status == PENDING:
                 claimed = replays_repo.claim_session(session.id)
                 if claimed is None:
