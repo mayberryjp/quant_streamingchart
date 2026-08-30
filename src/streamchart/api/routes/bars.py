@@ -8,7 +8,7 @@ from bottle import Bottle, request
 from streamchart.config import settings
 from streamchart.domain.bars import bar_to_dict, resample
 from streamchart.errors import ValidationError
-from streamchart.repository.bars_repo import get_bars
+from streamchart.repository.bars_repo import get_bars, get_latest_day
 
 
 def register_bars_routes(app: Bottle) -> None:
@@ -21,7 +21,9 @@ def register_bars_routes(app: Bottle) -> None:
 
         day: date | None = None
         date_param = request.query.get("date")
-        if date_param:
+        if date_param == "latest":
+            day = get_latest_day(ticker.upper(), settings.base_interval)
+        elif date_param:
             try:
                 day = date.fromisoformat(date_param)
             except ValueError:
@@ -32,7 +34,7 @@ def register_bars_routes(app: Bottle) -> None:
         return {
             "ticker": ticker.upper(),
             "interval": interval,
-            "date": date_param or None,
+            "date": day.isoformat() if day else None,
             "count": len(slices),
             "bars": [bar_to_dict(b) for b in slices],
         }

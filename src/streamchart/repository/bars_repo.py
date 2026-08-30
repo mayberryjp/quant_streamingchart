@@ -81,6 +81,20 @@ def get_bars(ticker: str, interval: str, day: date | None = None) -> list[Bar]:
     return [_row_to_bar(row) for row in rows]
 
 
+def get_latest_day(ticker: str, interval: str) -> date | None:
+    """Return the UTC calendar day of the most recent stored bar, or None."""
+    stmt = (
+        select(func.max(instrument_bars.c.bar_time))
+        .where(instrument_bars.c.ticker == ticker.upper())
+        .where(instrument_bars.c.interval == interval)
+    )
+    with get_engine().connect() as conn:
+        latest = conn.execute(stmt).scalar_one_or_none()
+    if latest is None:
+        return None
+    return latest.astimezone(UTC).date()
+
+
 def list_fetch_summaries(ticker: str | None = None) -> list[dict[str, Any]]:
     """Aggregate stored bars into one summary row per (ticker, interval)."""
     stmt = select(
