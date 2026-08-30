@@ -208,19 +208,6 @@ Constraint: `UNIQUE (ticker, interval, bar_time)` → upsert target (idempotent 
 | `error` | text | nullable |
 | `created_at` / `started_at` / `completed_at` | timestamptz | |
 
-### `replay_events` — per‑slice emission audit (idempotency + resume)
-| Column | Type | Notes |
-|---|---|---|
-| `id` | bigserial PK | |
-| `session_id` | uuid FK → replay_sessions | |
-| `sequence` | int | |
-| `bar_time` | timestamptz | |
-| `emitted_at` | timestamptz | |
-| `kafka_partition` | int | from delivery report |
-| `kafka_offset` | bigint | from delivery report |
-
-Constraint: `UNIQUE (session_id, sequence)`.
-
 ## 8. Kafka Message Contract
 - **Topic:** `market.replay.bars` (configurable).
 - **Key:** `ticker` (UTF‑8 bytes) → guarantees all slices for a ticker land on one partition and
@@ -375,7 +362,7 @@ route test with `respx`‑mocked Yahoo call (no live network in CI).
 - `domain/replay.py`: `ReplaySession` + status state machine
   (`pending→running→completed|failed|cancelled`, `running→cancelled`).
 - `repository/replays_repo.py`: create / get / list / update progress / request‑cancel.
-- Alembic migration: `replay_sessions`, `replay_events`.
+- Alembic migration: `replay_sessions`.
 - Routes: `POST /api/v1/replays`, `GET /api/v1/replays`, `GET /api/v1/replays/{id}`,
   `POST /api/v1/replays/{id}/cancel`.
 
@@ -399,7 +386,7 @@ route test with `respx`‑mocked Yahoo call (no live network in CI).
   `replay_worker_poll_seconds` for a runnable session; claim it (`pending→running`, set
   `started_at`).
 - For the claimed session, iterate slices from `last_sequence + 1`:
-  produce to Kafka → record `replay_events` row → `emitted_slices++`, `last_sequence=seq`
+  produce to Kafka → `emitted_slices++`, `last_sequence=seq`
   → `sleep(replay_interval_seconds)`. Set `is_first`/`is_last` flags. On completion set
   `status=completed`, `completed_at`.
 - Honor cancellation between slices (`cancelled`, stop emitting).

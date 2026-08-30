@@ -2,7 +2,6 @@ from sqlalchemy import (
     TIMESTAMP,
     BigInteger,
     Column,
-    ForeignKey,
     Integer,
     MetaData,
     Numeric,
@@ -47,22 +46,4 @@ replay_sessions = Table(
     Column("created_at", TIMESTAMP(timezone=True), nullable=False),
     Column("started_at", TIMESTAMP(timezone=True), nullable=True),
     Column("completed_at", TIMESTAMP(timezone=True), nullable=True),
-)
-
-replay_events = Table(
-    "replay_events",
-    metadata,
-    Column("id", BigInteger, primary_key=True),
-    Column(
-        "session_id",
-        UUID(as_uuid=False),
-        ForeignKey("replay_sessions.id", ondelete="CASCADE"),
-        nullable=False,
-    ),
-    Column("sequence", Integer, nullable=False),
-    Column("bar_time", TIMESTAMP(timezone=True), nullable=False),
-    Column("emitted_at", TIMESTAMP(timezone=True), nullable=False),
-    Column("kafka_partition", Integer, nullable=True),
-    Column("kafka_offset", BigInteger, nullable=True),
-    UniqueConstraint("session_id", "sequence", name="uq_replay_events_seq"),
 )

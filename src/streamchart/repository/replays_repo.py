@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import select, update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from streamchart.db import get_engine
 from streamchart.domain.replay import (
@@ -19,7 +17,7 @@ from streamchart.domain.replay import (
     ReplaySession,
 )
 from streamchart.errors import ConflictError, NotFoundError
-from streamchart.models import replay_events, replay_sessions
+from streamchart.models import replay_sessions
 from streamchart.timeutil import utcnow
 
 
@@ -188,27 +186,6 @@ def update_progress(session_id: str, *, emitted: int, last_sequence: int) -> Non
             .where(replay_sessions.c.id == session_id)
             .values(emitted_slices=emitted, last_sequence=last_sequence)
         )
-
-
-def record_event(
-    session_id: str,
-    sequence: int,
-    bar_time: datetime,
-    emitted_at: datetime,
-    partition: int,
-    offset: int,
-) -> None:
-    stmt = pg_insert(replay_events).values(
-        session_id=session_id,
-        sequence=sequence,
-        bar_time=bar_time,
-        emitted_at=emitted_at,
-        kafka_partition=partition,
-        kafka_offset=offset,
-    )
-    stmt = stmt.on_conflict_do_nothing(index_elements=["session_id", "sequence"])
-    with get_engine().begin() as conn:
-        conn.execute(stmt)
 
 
 def mark_completed(session_id: str) -> None:

@@ -1,22 +1,17 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import func, select
 
-from streamchart.db import get_engine
 from streamchart.errors import ConflictError, NotFoundError
-from streamchart.models import replay_events
 from streamchart.repository.replays_repo import (
     claim_next_runnable,
     create_session,
     get_session,
     is_cancelled,
     mark_completed,
-    record_event,
     request_cancel,
     update_progress,
 )
-from streamchart.timeutil import utcnow
 
 
 def _create():
@@ -64,20 +59,6 @@ def test_cancel_flow(db) -> None:
 
     with pytest.raises(ConflictError):
         request_cancel(session.id)
-
-
-def test_record_event_is_idempotent(db) -> None:
-    session = _create()
-    record_event(session.id, 0, utcnow(), utcnow(), 0, 0)
-    record_event(session.id, 0, utcnow(), utcnow(), 0, 5)
-
-    with get_engine().connect() as conn:
-        count = conn.execute(
-            select(func.count())
-            .select_from(replay_events)
-            .where(replay_events.c.session_id == session.id)
-        ).scalar()
-    assert count == 1
 
 
 def test_request_cancel_not_found(db) -> None:
