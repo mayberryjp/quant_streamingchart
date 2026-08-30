@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -62,13 +63,19 @@ def upsert_bars(bars: list[Bar]) -> int:
     return len(bars)
 
 
-def get_bars(ticker: str, interval: str) -> list[Bar]:
+def get_bars(ticker: str, interval: str, day: date | None = None) -> list[Bar]:
     stmt = (
         select(instrument_bars)
         .where(instrument_bars.c.ticker == ticker.upper())
         .where(instrument_bars.c.interval == interval)
         .order_by(instrument_bars.c.bar_time.asc())
     )
+    if day is not None:
+        start = datetime(day.year, day.month, day.day, tzinfo=UTC)
+        stmt = stmt.where(
+            instrument_bars.c.bar_time >= start,
+            instrument_bars.c.bar_time < start + timedelta(days=1),
+        )
     with get_engine().connect() as conn:
         rows = conn.execute(stmt).mappings().all()
     return [_row_to_bar(row) for row in rows]

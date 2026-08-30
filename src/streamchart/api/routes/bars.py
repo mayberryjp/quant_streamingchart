@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from bottle import Bottle, request
@@ -18,11 +19,20 @@ def register_bars_routes(app: Bottle) -> None:
             raise ValidationError("query param 'ticker' is required")
         interval = request.query.get("interval") or settings.base_interval
 
-        base = get_bars(ticker.upper(), settings.base_interval)
+        day: date | None = None
+        date_param = request.query.get("date")
+        if date_param:
+            try:
+                day = date.fromisoformat(date_param)
+            except ValueError:
+                raise ValidationError("query param 'date' must be in YYYY-MM-DD format")
+
+        base = get_bars(ticker.upper(), settings.base_interval, day)
         slices = base if interval == settings.base_interval else resample(base, interval)
         return {
             "ticker": ticker.upper(),
             "interval": interval,
+            "date": date_param or None,
             "count": len(slices),
             "bars": [bar_to_dict(b) for b in slices],
         }
