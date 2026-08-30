@@ -30,7 +30,12 @@ def parse_hhmm(value: str) -> dtime:
 
 
 def is_trigger_due(now_local: datetime, trigger: dtime, last_run_date: date | None) -> bool:
-    """True when the local clock has reached the trigger and it has not run today."""
+    """True when the local clock has reached the trigger and it has not run today.
+
+    Never fires on weekends (Saturday/Sunday) in local time.
+    """
+    if now_local.weekday() >= 5:
+        return False
     if last_run_date == now_local.date():
         return False
     return (now_local.hour, now_local.minute) >= (trigger.hour, trigger.minute)
