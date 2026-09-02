@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # Scheduled watchlist ingest.
     scheduler_enabled: bool = False
     scheduler_trigger_time: str = "11:00"
-    scheduler_timezone: str = "Asia/Tokyo"
+    scheduler_timezone: str = "America/New_York"
     scheduler_check_interval_seconds: float = 60.0
     scheduler_http_timeout_seconds: float = 30.0
     stickynote_base_url: str = "http://stickynote:8080"
