@@ -113,7 +113,7 @@ class _Inspector:
     def __init__(self, present: bool) -> None:
         self._present = present
 
-    def has_table(self, name: str) -> bool:
+    def has_table(self, name: str, schema: str | None = None) -> bool:
         return self._present
 
 

@@ -14,6 +14,7 @@ from streamchart.domain.bars import Bar, resample
 from streamchart.domain.replay import PENDING, ReplaySession
 from streamchart.integrations.kafka_producer import DeliveryResult, SliceProducer, create_producer
 from streamchart.logging import configure_logging, get_logger
+from streamchart.models import SCHEMA_NAME
 from streamchart.timeutil import utcnow
 
 log = get_logger("streamchart.worker.replay")
@@ -135,7 +136,7 @@ def wait_for_schema(*, attempts: int = 60, delay: float = 2.0) -> bool:
     """
     for attempt in range(1, attempts + 1):
         try:
-            if inspect(get_engine()).has_table(REQUIRED_TABLE):
+            if inspect(get_engine()).has_table(REQUIRED_TABLE, schema=SCHEMA_NAME):
                 return True
             log.info(
                 "waiting for schema: table %r not found (attempt %s/%s)",

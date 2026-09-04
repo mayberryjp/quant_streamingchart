@@ -11,7 +11,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 
-metadata = MetaData()
+# All tables owned by this service live under a dedicated Postgres schema.
+SCHEMA_NAME = "streamingchart"
+
+metadata = MetaData(schema=SCHEMA_NAME)
 
 instrument_bars = Table(
     "instrument_bars",

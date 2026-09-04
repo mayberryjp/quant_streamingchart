@@ -15,7 +15,7 @@ from streamchart.api.app import create_app
 from streamchart.config import settings
 from streamchart.db import get_engine
 from streamchart.domain.bars import Bar
-from streamchart.models import metadata
+from streamchart.models import SCHEMA_NAME, metadata
 
 
 @pytest.fixture
@@ -41,6 +41,8 @@ def db():
     if not _database_available():
         pytest.skip("database not available")
     engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{SCHEMA_NAME}"'))
     metadata.drop_all(engine)
     metadata.create_all(engine)
     yield engine
