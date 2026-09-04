@@ -52,8 +52,11 @@ class FakeBars:
     def __init__(self, count: int = 3) -> None:
         self._bars = [make_bar(i, 100.0 + i) for i in range(count)]
 
-    def get_bars(self, ticker: str, interval: str):
+    def get_bars(self, ticker: str, interval: str, day=None):
         return self._bars
+
+    def get_latest_day(self, ticker: str, interval: str):
+        return None
 
 
 class FakeProducer:

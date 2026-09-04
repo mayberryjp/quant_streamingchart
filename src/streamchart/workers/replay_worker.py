@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Callable
-from datetime import datetime
+from datetime import date, datetime
 from typing import Protocol
 
 from sqlalchemy import inspect
@@ -26,7 +26,8 @@ class SessionsRepo(Protocol):
 
 
 class BarsRepo(Protocol):
-    def get_bars(self, ticker: str, interval: str) -> list[Bar]: ...
+    def get_bars(self, ticker: str, interval: str, day: date | None = None) -> list[Bar]: ...
+    def get_latest_day(self, ticker: str, interval: str) -> date | None: ...
 
 
 class Producer(Protocol):
@@ -43,7 +44,8 @@ class Producer(Protocol):
 
 
 def build_slices(bars_repo: BarsRepo, session: ReplaySession, base_interval: str) -> list[Bar]:
-    bars = bars_repo.get_bars(session.ticker, base_interval)
+    day = bars_repo.get_latest_day(session.ticker, base_interval)
+    bars = bars_repo.get_bars(session.ticker, base_interval, day)
     return resample(bars, session.interval)
 
 
