@@ -8,7 +8,7 @@ from streamchart.config import settings
 from streamchart.domain.bars import resample
 from streamchart.domain.replay import session_to_dict
 from streamchart.errors import NotFoundError, ValidationError
-from streamchart.repository.bars_repo import get_bars
+from streamchart.repository.bars_repo import get_bars, get_latest_day
 from streamchart.repository.replays_repo import (
     create_session,
     get_session,
@@ -26,7 +26,8 @@ def register_replay_routes(app: Bottle) -> None:
         delay = float(body.get("replay_interval_seconds") or settings.replay_interval_seconds)
         topic = str(body.get("topic") or settings.kafka_topic)
 
-        base = get_bars(ticker, settings.base_interval)
+        day = get_latest_day(ticker, settings.base_interval)
+        base = get_bars(ticker, settings.base_interval, day)
         slices = resample(base, interval)
         if not slices:
             raise ValidationError(f"no bars stored for {ticker} {interval}; fetch first")
