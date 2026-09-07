@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -10,6 +11,9 @@ from streamchart.db import get_engine
 from streamchart.domain.bars import Bar
 from streamchart.models import instrument_bars
 from streamchart.timeutil import utcnow
+
+# Trading calendar days are measured in New York time, not UTC.
+MARKET_TZ = ZoneInfo("America/New_York")
 
 
 def _row_to_bar(row: Any) -> Bar:
@@ -71,10 +75,11 @@ def get_bars(ticker: str, interval: str, day: date | None = None) -> list[Bar]:
         .order_by(instrument_bars.c.bar_time.asc())
     )
     if day is not None:
-        start = datetime(day.year, day.month, day.day, tzinfo=UTC)
+        start = datetime(day.year, day.month, day.day, tzinfo=MARKET_TZ)
+        end = start + timedelta(days=1)
         stmt = stmt.where(
             instrument_bars.c.bar_time >= start,
-            instrument_bars.c.bar_time < start + timedelta(days=1),
+            instrument_bars.c.bar_time < end,
         )
     with get_engine().connect() as conn:
         rows = conn.execute(stmt).mappings().all()
@@ -92,7 +97,7 @@ def get_latest_day(ticker: str, interval: str) -> date | None:
         latest = conn.execute(stmt).scalar_one_or_none()
     if latest is None:
         return None
-    return latest.astimezone(UTC).date()
+    return latest.astimezone(MARKET_TZ).date()
 
 
 def list_fetch_summaries(ticker: str | None = None) -> list[dict[str, Any]]:
