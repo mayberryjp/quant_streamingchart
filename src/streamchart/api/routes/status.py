@@ -7,7 +7,7 @@ from bottle import Bottle, request
 from streamchart.domain.replay import session_to_dict
 from streamchart.repository.bars_repo import list_fetch_summaries
 from streamchart.repository.replays_repo import list_sessions
-from streamchart.timeutil import iso_utc
+from streamchart.timeutil import iso_local
 
 
 def register_status_routes(app: Bottle) -> None:
@@ -28,9 +28,9 @@ def register_status_routes(app: Bottle) -> None:
                 {
                     "interval": f["interval"],
                     "bars": int(f["bars"]),
-                    "first_bar": iso_utc(f["first_bar"]),
-                    "last_bar": iso_utc(f["last_bar"]),
-                    "last_fetched_at": iso_utc(f["last_fetched_at"]),
+                    "first_bar": iso_local(f["first_bar"]),
+                    "last_bar": iso_local(f["last_bar"]),
+                    "last_fetched_at": iso_local(f["last_fetched_at"]),
                 }
             )
 

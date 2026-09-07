@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from streamchart.timeutil import iso_utc
+from streamchart.timeutil import iso_local
 
 PENDING = "pending"
 RUNNING = "running"
@@ -50,8 +50,8 @@ def session_to_dict(session: ReplaySession) -> dict[str, Any]:
         "emitted_slices": session.emitted_slices,
         "last_sequence": session.last_sequence,
         "percent": round(percent, 2),
-        "created_at": iso_utc(session.created_at),
-        "started_at": iso_utc(session.started_at) if session.started_at else None,
-        "completed_at": iso_utc(session.completed_at) if session.completed_at else None,
+        "created_at": iso_local(session.created_at),
+        "started_at": iso_local(session.started_at) if session.started_at else None,
+        "completed_at": iso_local(session.completed_at) if session.completed_at else None,
         "error": session.error,
     }

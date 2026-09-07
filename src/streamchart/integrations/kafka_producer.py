@@ -9,7 +9,7 @@ from streamchart.config import settings
 from streamchart.domain.bars import Bar
 from streamchart.domain.replay import ReplaySession
 from streamchart.errors import KafkaProduceError
-from streamchart.timeutil import iso_utc
+from streamchart.timeutil import iso_local
 
 SCHEMA_VERSION = 1
 
@@ -52,13 +52,13 @@ def build_payload(
         "ticker": session.ticker,
         "sequence": sequence,
         "interval": session.interval,
-        "bar_time": iso_utc(bar.bar_time),
+        "bar_time": iso_local(bar.bar_time),
         "open": bar.open,
         "high": bar.high,
         "low": bar.low,
         "close": bar.close,
         "volume": bar.volume,
-        "emitted_at": iso_utc(emitted_at),
+        "emitted_at": iso_local(emitted_at),
         "is_first": is_first,
         "is_last": is_last,
     }

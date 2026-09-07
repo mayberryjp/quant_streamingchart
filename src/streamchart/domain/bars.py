@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from streamchart.timeutil import iso_utc
+from streamchart.timeutil import iso_local
 
 _UNIT_MINUTES = {"m": 1, "h": 60, "d": 1440}
 
@@ -83,7 +83,7 @@ def bar_to_dict(bar: Bar) -> dict[str, Any]:
     return {
         "ticker": bar.ticker,
         "interval": bar.interval,
-        "bar_time": iso_utc(bar.bar_time),
+        "bar_time": iso_local(bar.bar_time),
         "open": bar.open,
         "high": bar.high,
         "low": bar.low,

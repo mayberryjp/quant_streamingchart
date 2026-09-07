@@ -15,7 +15,7 @@ from streamchart.domain.replay import PENDING, ReplaySession
 from streamchart.integrations.kafka_producer import DeliveryResult, SliceProducer, create_producer
 from streamchart.logging import configure_logging, get_logger
 from streamchart.models import SCHEMA_NAME
-from streamchart.timeutil import utcnow
+from streamchart.timeutil import localnow
 
 log = get_logger("streamchart.worker.replay")
 
@@ -57,7 +57,7 @@ def process_next(
     *,
     base_interval: str,
     sleep: Callable[[float], None] = time.sleep,
-    now: Callable[[], datetime] = utcnow,
+    now: Callable[[], datetime] = localnow,
 ) -> bool:
     """Claim one runnable session, load its bars, and stream them. Returns True if a
     session was processed, False if none was available. The claim and the final
@@ -88,7 +88,7 @@ def stream_session(
     slices: list[Bar],
     *,
     sleep: Callable[[float], None] = time.sleep,
-    now: Callable[[], datetime] = utcnow,
+    now: Callable[[], datetime] = localnow,
 ) -> None:
     """Produce a session's remaining slices to Kafka. Zero database access: the
     caller preloads the bars and records the final status."""

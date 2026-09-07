@@ -18,7 +18,7 @@ from streamchart.domain.replay import (
 )
 from streamchart.errors import ConflictError, NotFoundError
 from streamchart.models import replay_sessions
-from streamchart.timeutil import utcnow
+from streamchart.timeutil import localnow
 
 
 def _row_to_session(row: Any) -> ReplaySession:
@@ -48,7 +48,7 @@ def create_session(
     total_slices: int,
 ) -> ReplaySession:
     session_id = str(uuid4())
-    now = utcnow()
+    now = localnow()
     with get_engine().begin() as conn:
         conn.execute(
             replay_sessions.insert().values(
@@ -118,7 +118,7 @@ def list_resumable() -> list[ReplaySession]:
 def claim_session(session_id: str) -> ReplaySession | None:
     """Atomically transition one pending session to running. Returns it, or None
     if it is not pending / already claimed by another process."""
-    now = utcnow()
+    now = localnow()
     with get_engine().begin() as conn:
         row = (
             conn.execute(
@@ -145,7 +145,7 @@ def claim_session(session_id: str) -> ReplaySession | None:
 
 def claim_next_runnable() -> ReplaySession | None:
     """Return the next pending/running session, transitioning pending -> running."""
-    now = utcnow()
+    now = localnow()
     with get_engine().begin() as conn:
         row = (
             conn.execute(
@@ -196,7 +196,7 @@ def mark_completed(session_id: str) -> None:
             .where(replay_sessions.c.status == RUNNING)
             .values(
                 status=COMPLETED,
-                completed_at=utcnow(),
+                completed_at=localnow(),
                 emitted_slices=replay_sessions.c.total_slices,
                 last_sequence=replay_sessions.c.total_slices - 1,
             )
@@ -209,12 +209,12 @@ def mark_failed(session_id: str, error: str) -> None:
             update(replay_sessions)
             .where(replay_sessions.c.id == session_id)
             .where(replay_sessions.c.status == RUNNING)
-            .values(status=FAILED, error=error, completed_at=utcnow())
+            .values(status=FAILED, error=error, completed_at=localnow())
         )
 
 
 def request_cancel(session_id: str) -> ReplaySession:
-    now = utcnow()
+    now = localnow()
     with get_engine().begin() as conn:
         row = (
             conn.execute(

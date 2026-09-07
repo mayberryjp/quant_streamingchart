@@ -7,7 +7,7 @@ from bottle import Bottle, request
 from streamchart.config import settings
 from streamchart.integrations.yahoo import fetch_intraday
 from streamchart.repository.bars_repo import upsert_bars
-from streamchart.timeutil import iso_utc
+from streamchart.timeutil import iso_local
 
 
 def register_fetch_routes(app: Bottle) -> None:
@@ -24,6 +24,6 @@ def register_fetch_routes(app: Bottle) -> None:
             "ticker": ticker,
             "interval": interval,
             "count": count,
-            "first_bar": iso_utc(bars[0].bar_time),
-            "last_bar": iso_utc(bars[-1].bar_time),
+            "first_bar": iso_local(bars[0].bar_time),
+            "last_bar": iso_local(bars[-1].bar_time),
         }

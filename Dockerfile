@@ -1,12 +1,15 @@
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    TZ=America/New_York
 
 WORKDIR /app
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends supervisor curl \
+ && apt-get install -y --no-install-recommends supervisor curl tzdata \
+ && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+ && echo $TZ > /etc/timezone \
  && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./

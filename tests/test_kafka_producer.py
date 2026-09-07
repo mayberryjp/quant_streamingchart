@@ -67,8 +67,8 @@ def test_build_payload_contract() -> None:
     assert payload["ticker"] == "MSFT"
     assert payload["sequence"] == 0
     assert payload["is_first"] is True
-    assert payload["bar_time"] == "2026-08-21T14:30:00Z"
-    assert payload["emitted_at"] == "2026-08-23T10:00:42Z"
+    assert payload["bar_time"] == "2026-08-21T10:30:00-04:00"
+    assert payload["emitted_at"] == "2026-08-23T06:00:42-04:00"
 
 
 def test_serialize_roundtrip() -> None:

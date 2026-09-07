@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from streamchart.db import get_engine
 from streamchart.domain.bars import Bar
 from streamchart.models import instrument_bars
-from streamchart.timeutil import utcnow
+from streamchart.timeutil import localnow
 
 # Trading calendar days are measured in New York time, not UTC.
 MARKET_TZ = ZoneInfo("America/New_York")
@@ -34,7 +34,7 @@ def upsert_bars(bars: list[Bar]) -> int:
     """Insert or update bars keyed on (ticker, interval, bar_time). Idempotent."""
     if not bars:
         return 0
-    now = utcnow()
+    now = localnow()
     rows = [
         {
             "ticker": bar.ticker,

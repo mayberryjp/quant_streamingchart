@@ -16,7 +16,7 @@ def test_fetch_ok(app: TestApp, monkeypatch) -> None:
     assert resp.status_code == 200
     assert resp.json["ticker"] == "MSFT"
     assert resp.json["count"] == 2
-    assert resp.json["first_bar"] == "2026-08-21T14:30:00Z"
+    assert resp.json["first_bar"] == "2026-08-21T10:30:00-04:00"
 
 
 def test_fetch_no_data_returns_422(app: TestApp, monkeypatch) -> None:

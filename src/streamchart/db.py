@@ -1,6 +1,7 @@
 from sqlalchemy import Engine, create_engine, text
 
 from streamchart.config import settings
+from streamchart.timeutil import LOCAL_TZ_NAME
 
 _engine: Engine | None = None
 
@@ -14,6 +15,7 @@ def get_engine() -> Engine:
             pool_size=settings.db_pool_size,
             max_overflow=settings.db_max_overflow,
             future=True,
+            connect_args={"options": f"-c timezone={LOCAL_TZ_NAME}"},
         )
     return _engine
 

@@ -47,7 +47,7 @@ def test_status_combines_fetches_and_replays(app: TestApp, monkeypatch) -> None:
     entry = entries[0]
     assert entry["ticker"] == "MSFT"
     assert entry["fetches"][0]["bars"] == 390
-    assert entry["fetches"][0]["last_fetched_at"] == "2026-08-23T10:00:00Z"
+    assert entry["fetches"][0]["last_fetched_at"] == "2026-08-23T06:00:00-04:00"
     assert entry["replays"][0]["status"] == "completed"
 
 
