@@ -134,6 +134,8 @@ def main() -> None:  # pragma: no cover - long-running loop wiring
     tz = ZoneInfo(settings.scheduler_timezone)
     trigger = parse_hhmm(settings.scheduler_trigger_time)
     last_run: date | None = None
+    attempt_date: date | None = None
+    attempts = 0
     log.info(
         "scheduler started trigger=%s tz=%s",
         settings.scheduler_trigger_time,
@@ -142,23 +144,37 @@ def main() -> None:  # pragma: no cover - long-running loop wiring
     while True:
         now_local = datetime.now(tz)
         if is_trigger_due(now_local, trigger, last_run):
-            try:
-                with httpx.Client(timeout=settings.scheduler_http_timeout_seconds) as client:
-                    wait_for_api(
-                        client,
-                        settings.internal_api_base_url,
-                        settings.scheduler_http_timeout_seconds,
+            today = now_local.date()
+            if attempt_date != today:
+                attempt_date = today
+                attempts = 0
+            if attempts >= settings.scheduler_max_attempts_per_day:
+                log.error("scheduler giving up for %s after %d attempts", today, attempts)
+                last_run = today
+            else:
+                attempts += 1
+                try:
+                    with httpx.Client(timeout=settings.scheduler_http_timeout_seconds) as client:
+                        wait_for_api(
+                            client,
+                            settings.internal_api_base_url,
+                            settings.scheduler_http_timeout_seconds,
+                        )
+                        run_job(
+                            client,
+                            stickynote_base_url=settings.stickynote_base_url,
+                            api_base_url=settings.internal_api_base_url,
+                            interval=settings.base_interval,
+                            replay_interval_seconds=settings.replay_interval_seconds,
+                        )
+                    last_run = today
+                except Exception:
+                    log.exception(
+                        "scheduler job failed (attempt %d/%d)",
+                        attempts,
+                        settings.scheduler_max_attempts_per_day,
                     )
-                    run_job(
-                        client,
-                        stickynote_base_url=settings.stickynote_base_url,
-                        api_base_url=settings.internal_api_base_url,
-                        interval=settings.base_interval,
-                        replay_interval_seconds=settings.replay_interval_seconds,
-                    )
-            except Exception:
-                log.exception("scheduler job failed")
-            last_run = now_local.date()
+                    time.sleep(settings.scheduler_retry_backoff_seconds)
         time.sleep(settings.scheduler_check_interval_seconds)
 
 

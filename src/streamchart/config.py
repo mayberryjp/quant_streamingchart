@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     scheduler_timezone: str = "America/New_York"
     scheduler_check_interval_seconds: float = 60.0
     scheduler_http_timeout_seconds: float = 30.0
+    scheduler_max_attempts_per_day: int = 3
+    scheduler_retry_backoff_seconds: float = 60.0
     stickynote_base_url: str = "http://stickynote:8080"
     internal_api_base_url: str = "http://localhost:8000"
 
